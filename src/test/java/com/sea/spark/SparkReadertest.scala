@@ -21,7 +21,7 @@ import org.junit.Test
 
 case class Booking(businessType:String,bookingNo:String,status:String,mawbNo:String,noOfBags:String,milestoneStatus:String);
 case class Milestone(number:String,numberType:String,status:String,customer:String,bookingNo:String,lazadaStatusCode:String,actionPlace:String);
-class TTTtest {
+class SparkReadertest {
 
     // 定义表名
     val MONGODB_BOOKING_COLLECTION = "booking"
@@ -65,9 +65,6 @@ class TTTtest {
           .as[Milestone]
           .toDF()
         ratingDF.show(10)
-
-
-
 
 
 

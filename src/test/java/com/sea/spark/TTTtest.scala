@@ -31,8 +31,6 @@ class TTTtest {
     @Test
     def  test1:Unit=
     {
-
-
         val config = Map(
             "spark.cores" -> "local[*]",
             "mongo.uri" -> "mongodb://192.168.18.129:27017/swift",

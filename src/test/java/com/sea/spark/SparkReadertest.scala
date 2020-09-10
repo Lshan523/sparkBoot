@@ -1,26 +1,20 @@
 package com.sea.spark
 
+import java.util
+
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.junit.Test
 
 
-//"number": "UFL-BK2020072315563672466",
-//"numberType": "bookingNo",
-//"status": "DAM",
-//"customer": "HKG041049",
-//"numberApp": "swift",
-//"bookingNo": "UFL-BK2020072315563672466",
-//"lazadaStatusCode": "remark_parcel_damage_by_lh",
-//"actionPlace": "HKG",
-//"actionTimeLoc": "2020-07-20 14:20:52",
-//"actionTimeTz": "GMT+8",
-//"actionTimeGmt": "2020-07-20 14:20:52",
-//"actionBy": "Sea",
+
+
+
 
 
 case class Booking(businessType:String,bookingNo:String,status:String,mawbNo:String,noOfBags:String,milestoneStatus:String);
 case class Milestone(number:String,numberType:String,status:String,customer:String,bookingNo:String,lazadaStatusCode:String,actionPlace:String);
+case class Order(customer:String,bookingNo:String,bookingDateGMT:String,ecOrderNo:String,courierBillNo:String,bagId:String);
 class SparkReadertest {
 
     // 定义表名
@@ -33,7 +27,7 @@ class SparkReadertest {
     {
         val config = Map(
             "spark.cores" -> "local[*]",
-            "mongo.uri" -> "mongodb://192.168.18.129:27017/swift",
+            "mongo.swift.uri" -> "mongodb://192.168.18.129:27017/swift",
             "mongo.db" -> "recommender"
         )
         // 创建一个sparkConf
@@ -41,11 +35,11 @@ class SparkReadertest {
         // 创建一个SparkSession
         val spark = SparkSession.builder().config(sparkConf).getOrCreate()
         import spark.implicits._
-        implicit val mongoConfig = MongoConfig(config("mongo.uri"), config("mongo.db"))
-
+//        implicit val mongoConfig = MongoConfig(config("mongo.uri"), config("mongo.db"))
+        val start = System.currentTimeMillis()
         // 从mongodb加载booking数据
         val bookingDF = spark.read
-          .option("uri", mongoConfig.uri)
+          .option("uri", config("mongo.swift.uri"))
           .option("collection", MONGODB_BOOKING_COLLECTION)
           .format("com.mongodb.spark.sql")
           .load()
@@ -53,22 +47,56 @@ class SparkReadertest {
           .select("businessType","bookingNo","status","noOfBags","milestoneStatus","mawbNo")
           .as[Booking]
           .toDF()
+        val totalcost = System.currentTimeMillis()-start
+        println("load booking :>>>"+totalcost)
           bookingDF.show(10)
 
         // 从mongodb加载milestone数据
-        val ratingDF = spark.read
-          .option("uri", mongoConfig.uri)
+        val milestoneDF = spark.read
+          .option("uri", config("mongo.swift.uri"))
           .option("collection", MONGODB_MILESTONE_COLLECTION)
           .format("com.mongodb.spark.sql")
           .load()
           .select("number","bookingNo","numberType","status","customer","lazadaStatusCode","actionPlace")
           .as[Milestone]
           .toDF()
-        ratingDF.show(10)
+        val totalcost2 = System.currentTimeMillis()-start-totalcost
+        println("load milestone :>>>"+totalcost2)
+//        milestoneDF.show(10)
+//        bookingDF.createOrReplaceTempView("bookings")
+//        spark.sql("select bookingNo from bookings").show(10)
+
+
+        val orderDF = spark.read
+          //          .option("uri", mongoConfig.uri)
+          .option("uri", config("mongo.swift.uri"))
+          .option("collection", MONGODB_ORDER_COLLECTION)
+          .format("com.mongodb.spark.sql")
+          .load()
+        .select("customer","bookingNo","bookingDateGMT","ecOrderNo","courierBillNo","bagId")
+          .as[Order]
+          .toDF()
+        val totalcost3 = System.currentTimeMillis()-start-totalcost-totalcost2
+        println("load order :>>>"+totalcost3)
+      // [bookingNo: string], value: [customer: string, bookingNo: string ... 4 more fields],
+      val bookingsList = new util.ArrayList[Booking]()
+//      orderDF.groupBy("bookingNo").count().toDF().map(x=>{
+//        Booking("",x.getAs("bookingNo"),x.getAs("count"),"","","")
+//       }).show(100)
 
 
 
 
+      bookingDF.join(milestoneDF,"bookingNo").toDF()
+      .write
+      .option("uri", config("mongo.swift.uri"))
+      .option("collection", "hahha")
+      .mode("overwrite")
+      .format("com.mongodb.spark.sql")
+      .save()
+
+
+        spark.stop()
 
     }
 

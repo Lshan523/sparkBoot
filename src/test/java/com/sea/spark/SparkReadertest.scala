@@ -7,11 +7,6 @@ import org.apache.spark.sql.SparkSession
 import org.junit.Test
 
 
-
-
-
-
-
 case class Booking(businessType:String,bookingNo:String,status:String,mawbNo:String,noOfBags:String,milestoneStatus:String);
 case class Milestone(number:String,numberType:String,status:String,customer:String,bookingNo:String,lazadaStatusCode:String,actionPlace:String);
 case class Order(customer:String,bookingNo:String,bookingDateGMT:String,ecOrderNo:String,courierBillNo:String,bagId:String);
@@ -43,8 +38,8 @@ class SparkReadertest {
           .option("collection", MONGODB_BOOKING_COLLECTION)
           .format("com.mongodb.spark.sql")
           .load()
-          .filter($"businessType".equalTo("B2B"))
           .select("businessType","bookingNo","status","noOfBags","milestoneStatus","mawbNo")
+          .filter($"businessType".equalTo("B2B"))
           .as[Booking]
           .toDF()
         val totalcost = System.currentTimeMillis()-start
@@ -73,9 +68,11 @@ class SparkReadertest {
           .option("collection", MONGODB_ORDER_COLLECTION)
           .format("com.mongodb.spark.sql")
           .load()
-        .select("customer","bookingNo","bookingDateGMT","ecOrderNo","courierBillNo","bagId")
+          .select("customer","bookingNo","bookingDateGMT","ecOrderNo","courierBillNo","bagId")
+          .filter($"bookingDateGMT">"2020-08-25")
           .as[Order]
           .toDF()
+      orderDF.show(10)
         val totalcost3 = System.currentTimeMillis()-start-totalcost-totalcost2
         println("load order :>>>"+totalcost3)
       // [bookingNo: string], value: [customer: string, bookingNo: string ... 4 more fields],
@@ -84,16 +81,23 @@ class SparkReadertest {
 //        Booking("",x.getAs("bookingNo"),x.getAs("count"),"","","")
 //       }).show(100)
 
+      orderDF.createOrReplaceTempView("orders")
 
-
-
-      bookingDF.join(milestoneDF,"bookingNo").toDF()
-      .write
-      .option("uri", config("mongo.swift.uri"))
-      .option("collection", "hahha")
-      .mode("overwrite")
-      .format("com.mongodb.spark.sql")
-      .save()
+      val start1 = System.currentTimeMillis()
+        spark.sql("select bookingNo from  orders limit 1000").show(1000)
+      println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+      println( System.currentTimeMillis()-start1)
+      println( System.currentTimeMillis()-start1)
+      println( System.currentTimeMillis()-start1)
+      println( System.currentTimeMillis()-start1)
+      println( System.currentTimeMillis()-start1)
+      //      bookingDF.join(milestoneDF,"bookingNo").toDF()
+//      .write
+//      .option("uri", config("mongo.swift.uri"))
+//      .option("collection", "hahha")
+//      .mode("overwrite")
+//      .format("com.mongodb.spark.sql")
+//      .save()
 
 
         spark.stop()
